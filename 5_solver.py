@@ -139,7 +139,7 @@ def main():
     start_time = time.time()
     
     p("Chargement des données...")
-    df = pd.read_csv('out_prod_cartesien.csv', sep=';')  # Assurez-vous que le chemin est correct
+    df = pd.read_csv('out_prod_cartesien.csv', sep=';')  # Verifier que le chemin est correct
     p(f"Données chargées. Nombre de lignes : {len(df)}")
 
     # Résolution du problème
