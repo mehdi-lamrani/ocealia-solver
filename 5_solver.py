@@ -33,7 +33,7 @@ def solve_transportation_problem(df):
     start_time = time.time()
     # Variables de décision
     vars = pulp.LpVariable.dicts("Transport", 
-                                 ((p, o, d) for p in produits for o in origines for d in destinations),
+                                 ((prd, o, d) for prd in produits for o in origines for d in destinations),
                                  lowBound=0,
                                  cat='Integer')
     p(f"Création des variables terminée en {time.time() - start_time:.2f} secondes")
@@ -52,14 +52,20 @@ def solve_transportation_problem(df):
     start_time = time.time()
 
     # Fonction objectif optimisée
-    prob += pulp.lpSum(vars[p, i, j] * cost_dict.get((p, i, j), 0)
-                    for p in produits for i in origines for j in destinations)
+    prob += pulp.lpSum(vars[prd, o, d] * cost_dict.get((prd, o, d), 0)
+                    for p in produits for o in origines for f in destinations)
 
     p(f"Fonction objectif définie en {time.time() - start_time:.2f} secondes")
 
     p("Ajout des contraintes...")
     start_time = time.time()
     # Contraintes
+    # 1 - Ne pas dépasser les stocks disponibles dans les sites d'origine
+    # 2 - Ne pas dépasser les capacités de réception ou de stockage des sites de destination
+
+    # Contrainte 1 :
+    # la somme des quantités transportées de ce produit depuis ce site d'origine vers toutes les destinations 
+    # ne doit pas dépasser la quantité prévue disponible à l'origine ('QTE_PREV')
     for prd in produits:
         for o in origines:
             matching_rows = df[(df['CODE_PRODUIT_STOCKAGE'] == prd) & (df['CODE_SITE_ORIGINE'] == o)]
@@ -68,6 +74,9 @@ def solve_transportation_problem(df):
             else:
                 p(f"Warning: No data found for product {prd} at origin {o}")
 
+    # Contrainte 2 :
+    # la somme des quantités transportées de ce produit vers cette destination, en provenance de toutes les origines, 
+    # ne doit pas dépasser la capacité de la destination ('CAPACITE')
     for prd in produits:
         for d in destinations:
             matching_rows = df[(df['CODE_SITE_DESTINATION'] == d)]
@@ -100,9 +109,9 @@ def solve_transportation_problem(df):
     start_time = time.time()
     # Récupération des résultats
     resultats = defaultdict(float)
-    for (p, i, j), v in vars.items():
+    for (prd, o, d), v in vars.items():
         if v.value() > 0:
-            resultats[(p, i, j)] += v.value()
+            resultats[(prd, o, d)] += v.value()
     p(f"Résultats récupérés en {time.time() - start_time:.2f} secondes")
 
     return resultats, prob.objective.value()
